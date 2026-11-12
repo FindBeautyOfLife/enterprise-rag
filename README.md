@@ -4,11 +4,9 @@
 
 ## 启动
 
-在项目根目录执行，使用 Python 3.10 及以上版本，建议创建独立虚拟环境：
+在项目根目录执行，使用 Python 3.10 及以上版本，建议创建独立虚拟环境，再执行：
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 # 仅在没有 .env 时执行；已有配置请保留。
 if (!(Test-Path .env)) { Copy-Item .env.example .env }
