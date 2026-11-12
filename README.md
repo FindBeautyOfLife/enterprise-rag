@@ -4,12 +4,24 @@
 
 ## 启动
 
-在项目根目录执行，使用 Python 3.10 及以上版本，建议创建独立虚拟环境，再执行：
+以下命令使用 Windows PowerShell，均在项目根目录执行。已验证的运行环境为 Python 3.10；建议使用独立虚拟环境或 Conda 环境，避免与其他项目的依赖冲突。
 
 ```powershell
 python -m pip install -r requirements.txt
 # 仅在没有 .env 时执行；已有配置请保留。
 if (!(Test-Path .env)) { Copy-Item .env.example .env }
+```
+
+先按下表确定要使用的功能，并参考[环境变量](#环境变量)编辑 `.env`，再启动服务：
+
+| 使用方式 | 准备条件 |
+| --- | --- |
+| 文档管理、关键词检索 | 安装 Python 依赖即可，无需模型或密钥 |
+| 重建索引 | 准备嵌入模型 |
+| 混合检索 | 准备嵌入模型、重排模型，并重建索引 |
+| 知识问答 | 完成混合检索准备，并配置 `DASHSCOPE_API_KEY` |
+
+```powershell
 python -m uvicorn src.api.main:app --host 127.0.0.1 --port 8000
 ```
 
@@ -18,7 +30,7 @@ python -m uvicorn src.api.main:app --host 127.0.0.1 --port 8000
 1. 点击左侧 `＋` 创建知识库。
 2. 上传 `.docx`、`.txt` 或 `.md`。使用自己有权处理的文档；原始资料不随仓库分发。
 3. 通过“预览”检查分块；“检索测试”的关键词模式此时即可使用。
-4. 点击“重建索引”，然后使用混合检索或知识问答。
+4. 如需混合检索或问答，先完成对应配置，再点击“重建索引”。
 
 默认 embedding 使用本地 `data/models/bge-small-zh-v1.5`，要求 CLS pooling 和 512 维。Reranker 默认 `BAAI/bge-reranker-base`，首次使用若无缓存需要下载，也可在 `.env` 中设为本地模型路径。问答需要配置 `DASHSCOPE_API_KEY`；文档管理、关键词检索不需要密钥。
 
@@ -36,15 +48,32 @@ python -m uvicorn src.api.main:app --host 127.0.0.1 --port 8000
 ## 验证
 
 ```powershell
+# 接口回归：使用模拟向量库和大模型，不需要模型权重或真实密钥。
 python -m unittest discover -s tests -v
-# 使用真实本地模型，独立临时数据，不调用付费大模型 API。
+# 嵌入模型与 Chroma 验证：需要已准备好的嵌入模型。
 python scripts/31_smoke_knowledge.py
+# 完整混合检索验证：还需要重排模型。
 python scripts/31_smoke_knowledge.py --hybrid
 ```
 
-可选浏览器验收脚本：`tests/browser_smoke.cjs`。需可导入的 Playwright 包和 Microsoft Edge，默认连接 `http://127.0.0.1:8765`。先以临时 `RAG_DATA_DIR` 启动服务，再执行 `node tests/browser_smoke.cjs`。脚本会创建并删除测试知识库，截图写入 `tests/artifacts/`。
+两个模型验证命令使用独立临时数据，不调用大模型 API；使用远程模型标识且没有本地缓存时，模型库仍可能下载权重。临时目录路径会在成功输出中显示，进程退出后可手动清理。
 
-问答布局回归：`node tests/chat_layout.cjs`。使用模拟回答，验证多轮长对话、引用展开、滚动位置和多种窗口尺寸，不调用实际大模型接口。
+可选浏览器测试需要 Node.js、Playwright 和 Microsoft Edge。在终端 A 中使用独立测试目录启动服务：
+
+```powershell
+$env:RAG_DATA_DIR = Join-Path ([System.IO.Path]::GetTempPath()) ('enterprise-rag-browser-' + [guid]::NewGuid().ToString('N'))
+python -m uvicorn src.api.main:app --host 127.0.0.1 --port 8765
+```
+
+在项目根目录打开终端 B：
+
+```powershell
+npm install --no-save playwright
+node tests/browser_smoke.cjs
+node tests/chat_layout.cjs
+```
+
+`browser_smoke.cjs` 检查文档操作和关键词检索，会创建并删除测试知识库；`chat_layout.cjs` 使用模拟回答检查长对话、引用展开、滚动位置和多种窗口尺寸。截图写入 `tests/artifacts/`。结束后在终端 A 按 Ctrl+C 停止服务，再执行 `Remove-Item Env:RAG_DATA_DIR`，恢复默认数据目录配置。不要对实际业务资料运行浏览器验收。
 
 ## 运行边界
 
@@ -68,7 +97,7 @@ src/agent/        LangGraph 工作流
 src/generation/   大模型客户端及答案生成
 src/vectorstores/ Chroma 与文档标识
 frontend/         浏览器界面
-scripts/          原实验流程及本地冒烟脚本
+scripts/          独立检索实验及模型验证脚本
 tests/            单元测试与可选浏览器测试
 docs/             架构、接口与验证说明
 data/             本地资料、模型与运行数据（不随仓库分发）
@@ -99,10 +128,18 @@ data/             本地资料、模型与运行数据（不随仓库分发）
 
 `scripts/30_pin_embedding_model.py` 依赖旧 `nuist_charter_v1` 集合和参考向量，用于模型与参考向量的一致性校验，不适合作为空仓库首次安装命令。其他编号脚本用于独立检索实验，部分依赖本地章程与旧索引。日常使用优先按本文 API 启动流程操作。
 
+脚本分组、运行前提及数据写入范围见 [实验脚本说明](scripts/README.md)。
+
+## 常见问题
+
+- **重建索引提示模型不可用**：克隆仓库不包含 `data/models/`，请设置 `RAG_EMBEDDING_MODEL` 为有效的本地目录或模型标识；远程模型首次加载需要网络。
+- **关键词检索可用，混合检索不可用**：确认重排模型可以加载，且上传、替换或删除文档后已经重新构建索引。
+- **问答提示未配置密钥**：将自己的密钥填入项目根目录 `.env` 的 `DASHSCOPE_API_KEY`，重新启动服务；操作系统中同名环境变量会覆盖 `.env`。
+- **测试日志出现 `simulated embedding failure`**：这是失败恢复测试主动注入的异常，以测试结尾的 `OK` 或失败汇总为准。
+- **安装或导入依赖失败**：确认终端已启用目标 Python 环境，使用 `python -m pip` 安装；依赖按项目版本固定，不建议直接混装到已有大型环境。
+
 ## 公开发布与数据边界
 
 当前服务没有认证或用户权限控制，仅用于可信本机环境，保持监听 `127.0.0.1`，不要直接暴露到公网。问答会将问题和检索到的文档片段发送至所配置的大模型服务，只使用已获授权可发送的资料。流程日志不打印问题正文；第三方异常日志仍可能包含路径和服务详情，分享前须脱敏。
 
 原始 DOCX 可能带有作者、最后修改者等元数据，公开分发前请确认内容权利并检查元数据。默认不提交原始资料、数据库、模型和测试截图。项目尚未附带开源许可证，发布者应确认授权后选择许可证。
-
-可选浏览器测试需要 Node.js、可导入的 Playwright 包及 Microsoft Edge。可先执行 `npm install --no-save playwright`；不要对生产资料运行浏览器验收。
