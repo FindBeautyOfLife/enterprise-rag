@@ -33,7 +33,7 @@ def parse_upload(filename, content, document_key):
                     raise ValueError("DOCX 解压后超过 50 MB，请拆分文件")
             word = WordDocument(io.BytesIO(content))
             lines = [p.text.strip() for p in word.paragraphs if p.text.strip()]
-            # 提取表格文字，补充原章程加载器未处理的表格内容。
+            # 将表格行追加为文本，纳入文档检索。
             lines.extend(
                 " | ".join(c.text for c in row.cells)
                 for table in word.tables
