@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>知序 · 企业知识库</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/app.js" defer></script>
+</head>
+
+<body>
+  <aside class="sidebar">
+    <div class="brand"><span class="logo">知</span>
+      <div>知序 <small>ENTERPRISE KNOWLEDGE</small></div>
+    </div>
+    <div class="side-heading">我的知识库 <button id="create-base" class="icon" aria-label="新建知识库">＋</button></div>
+    <nav id="bases" aria-label="知识库列表"></nav>
+    <div class="side-footer"><span class="dot"></span><span id="connection">正在连接服务</span><a href="/docs" target="_blank"
+        rel="noreferrer">API ↗</a></div>
+  </aside>
+  <main>
+    <header>
+      <div>
+        <div class="eyebrow">KNOWLEDGE WORKSPACE</div>
+        <h1 id="base-title">企业知识库</h1>
+        <p id="base-description">让散落的文档，成为可追溯的答案。</p>
+      </div>
+      <div class="actions"><button id="edit-base" disabled>编辑资料</button><button id="delete-base" class="danger"
+          disabled>删除知识库</button></div>
+    </header>
+    <div id="notice" role="status" aria-live="polite" hidden></div>
+    <section class="stats" aria-label="知识库统计">
+      <div><span>文档总数</span><strong id="doc-count">0</strong><small>已解析的原始资料</small></div>
+      <div><span>知识片段</span><strong id="chunk-count">0</strong><small>用于精确检索的子片段</small></div>
+      <div><span>检索索引</span><strong id="index-state" class="status-text">未选择</strong><small
+          id="revision">选择一个知识库开始</small></div>
+    </section>
+    <div class="tabs" role="tablist" aria-label="工作区">
+      <button id="tab-documents" class="active" role="tab" aria-selected="true" aria-controls="documents-panel"
+        data-tab="documents">文档管理</button>
+      <button id="tab-search" role="tab" aria-selected="false" aria-controls="search-panel"
+        data-tab="search">检索测试</button>
+      <button id="tab-chat" role="tab" aria-selected="false" aria-controls="chat-panel" data-tab="chat">知识问答</button>
+    </div>
+    <section id="documents-panel" class="panel" role="tabpanel" aria-labelledby="tab-documents">
+      <div class="section-title">
+        <div>
+          <h2>文档资料</h2>
+          <p>上传、检查分块，再构建知识索引。</p>
+        </div><button id="reindex" disabled>↻ 重建索引</button>
+      </div>
+      <label class="upload" id="drop-zone" tabindex="0"><span
+          class="upload-symbol">↑</span><strong>点击选择文件，或拖拽到这里</strong><span id="upload-hint">支持 DOCX、TXT、Markdown ·
+          单文件最大 20 MB</span><input id="files" type="file" accept=".docx,.txt,.md" multiple hidden disabled></label>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>文档名称</th>
+              <th>文件大小</th>
+              <th>父段 / 子片段</th>
+              <th>更新时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="documents"></tbody>
+        </table>
+      </div>
+      <p id="empty-docs" class="empty">先创建或选择知识库，再上传第一份资料。</p>
+    </section>
+    <section id="search-panel" class="panel" role="tabpanel" aria-labelledby="tab-search" hidden>
+      <div class="section-title">
+        <div>
+          <h2>查看检索依据</h2>
+          <p>关键词模式无需加载模型；混合模式包含向量召回、BM25 与重排序。</p>
+        </div>
+      </div>
+      <form id="search-form">
+        <div class="form-row"><label>检索模式<select id="search-mode">
+              <option value="keyword">关键词 BM25</option>
+              <option value="hybrid">混合检索 + Rerank</option>
+            </select></label><label>返回数量<select id="top-k">
+              <option>3</option>
+              <option>5</option>
+              <option>10</option>
+            </select></label></div><label for="search-question">检索内容</label><textarea id="search-question"
+          maxlength="2000" required placeholder="例如：学校的办学宗旨是什么？"></textarea><button class="primary" type="submit">检索资料
+          →</button>
+      </form>
+      <div id="search-results" class="results" aria-live="polite"></div>
+    </section>
+    <section id="chat-panel" class="panel" role="tabpanel" aria-labelledby="tab-chat" hidden>
+      <div class="section-title chat-heading">
+        <div>
+          <h2>知识助理</h2>
+          <p>基于当前知识库回答 · 点击引用核对原文</p>
+        </div><button id="clear-chat" type="button" disabled>清空对话</button>
+      </div>
+      <div class="conversation">
+        <div id="chat-messages" class="messages" role="region" aria-label="对话记录" tabindex="0">
+          <div class="empty chat-empty"><span
+              class="empty-mark">知</span><strong>你的资料，随问随查</strong><span>完成索引后开始提问，每次问题独立检索。</span></div>
+        </div>
+        <button id="latest-message" type="button" hidden>↓ 回到最新消息</button>
+      </div>
+      <form id="chat-form" class="composer"><label for="chat-question">你的问题</label><textarea id="chat-question" rows="2"
+          maxlength="2000" required placeholder="输入问题，获得有据可查的回答…"></textarea>
+        <div class="composer-footer"><span id="chat-status" role="status" aria-live="polite">Ctrl / ⌘ + Enter 发送 · Enter
+            换行</span><button class="primary" type="submit">发送问题 →</button></div>
+      </form>
+    </section>
+    <footer>知序 / Enterprise RAG <span>资料有序 · 回答有据</span></footer>
+  </main>
+  <dialog id="base-dialog">
+    <form id="base-form">
+      <div class="section-title">
+        <h2 id="dialog-title">新建知识库</h2><button type="button" data-close="base-dialog" class="icon"
+          aria-label="关闭">×</button>
+      </div><label for="base-name">知识库名称</label><input id="base-name" maxlength="100" required
+        placeholder="例如：学校规章制度"><label for="base-desc">说明</label><textarea id="base-desc" maxlength="1000"
+        placeholder="介绍资料范围和用途"></textarea>
+      <p id="base-error" class="form-error" role="alert"></p><button class="primary" type="submit">保存知识库</button>
+    </form>
+  </dialog>
+  <dialog id="preview-dialog">
+    <div class="section-title">
+      <div>
+        <h2 id="preview-title">片段预览</h2>
+        <p id="preview-meta"></p>
+      </div><button data-close="preview-dialog" class="icon" aria-label="关闭">×</button>
+    </div>
+    <div id="preview-content"></div>
+    <div class="actions"><button id="preview-prev">上一页</button><button id="preview-next">下一页</button></div>
+  </dialog>
+  <input type="file" id="replace-file" accept=".docx,.txt,.md" hidden>
+</body>
+
+</html>

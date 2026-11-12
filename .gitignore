@@ -1,0 +1,52 @@
+# Local credentials (keep the public template)
+.env
+.env.*
+!.env.example
+*.env
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+service-account*.json
+
+# Python environments and generated files
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+build/
+dist/
+
+# Editor and operating system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local logs, scratch files and optional browser dependencies
+*.log
+*.tmp
+*.bak
+.audit-tmp/
+node_modules/
+tests/artifacts/
+
+# Runtime state, private source documents and large model assets
+# Keep these files on disk; prepare local documents/models as described in README.
+data/knowledge/
+data/models/
+data/chroma_db/
+data/documents/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+*.db-wal
+*.db-shm
